@@ -1,0 +1,68 @@
+import type { Transaction } from "./transactions.types";
+
+export const transactions: Transaction[] = [
+  {
+    id: "1",
+    description: "Jantar no Restaurante",
+    date: "30/11/25",
+    category: "alimentacao",
+    type: "saida",
+    amount: "- R$ 89,50",
+  },
+  {
+    id: "2",
+    description: "Posto de Gasolina",
+    date: "29/11/25",
+    category: "transporte",
+    type: "saida",
+    amount: "- R$ 100,00",
+  },
+  {
+    id: "3",
+    description: "Compras no Mercado",
+    date: "28/11/25",
+    category: "mercado",
+    type: "saida",
+    amount: "- R$ 156,80",
+  },
+  {
+    id: "4",
+    description: "Retorno de Investimento",
+    date: "26/11/25",
+    category: "investimento",
+    type: "entrada",
+    amount: "+ R$ 340,25",
+  },
+  {
+    id: "5",
+    description: "Aluguel",
+    date: "26/11/25",
+    category: "utilidades",
+    type: "saida",
+    amount: "- R$ 1.700,00",
+  },
+  {
+    id: "6",
+    description: "Freelance",
+    date: "24/11/25",
+    category: "salario",
+    type: "entrada",
+    amount: "+ R$ 2.500,00",
+  },
+  {
+    id: "7",
+    description: "Compras Jantar",
+    date: "22/11/25",
+    category: "mercado",
+    type: "saida",
+    amount: "- R$ 150,00",
+  },
+  {
+    id: "8",
+    description: "Cinema",
+    date: "18/11/25",
+    category: "entretenimento",
+    type: "saida",
+    amount: "- R$ 88,00",
+  },
+];
