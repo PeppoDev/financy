@@ -1,11 +1,11 @@
 import { prisma } from "../../prisma/prisma.js";
 import type { Login } from "../dtos/input/login.js";
 import type { Auth } from "../dtos/output/auth.js";
-import type { User } from "../generated/prisma/client.js";
 import {
   NotFoundException,
   UnauthorizedException,
 } from "../exceptions/graphql.exception.js";
+import type { User } from "../generated/prisma/client.js";
 import { CryptHelper } from "../helper/crypt.helper.js";
 import { JWTHelper } from "../helper/jwt.helper.js";
 

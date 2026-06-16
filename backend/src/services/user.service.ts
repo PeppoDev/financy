@@ -13,8 +13,9 @@ export class UserService {
   }
 
   async update(id: string, data: UpdateUser) {
-    const user = await prisma.user.findUniqueOrThrow({
+    const user = await prisma.user.update({
       where: { id },
+      data,
     });
 
     return user;
