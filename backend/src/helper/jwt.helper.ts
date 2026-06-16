@@ -14,7 +14,6 @@ export class JWTHelper {
 
   static signJwt(payload: object, expiresIn: string) {
     const secret = process.env.JWT_SECRET as unknown as Secret;
-    console.log(secret);
     let options: jwt.SignOptions = {};
 
     const expiration = expiresIn;

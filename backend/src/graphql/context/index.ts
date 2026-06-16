@@ -19,10 +19,8 @@ export const buildContext = async ({
 
   if (authHeader?.startsWith("Bearer ")) {
     token = authHeader.substring("Bearer ".length);
-    console.log("token: ", token);
     try {
       const payload = JWTHelper.verifyJwt(token);
-      console.log("payload: ", payload);
       user = payload.id;
     } catch (error) {
       console.log(error);

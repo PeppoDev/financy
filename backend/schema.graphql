@@ -9,6 +9,16 @@ type Auth {
   user: User!
 }
 
+type Category {
+  author: User
+  authorId: String!
+  color: String!
+  description: String
+  icon: String!
+  id: ID!
+  title: String!
+}
+
 input CreateUser {
   email: String!
   name: String!
@@ -21,23 +31,27 @@ input Login {
 }
 
 type Mutation {
+  createCategory(data: UpsertCategory!): Category!
   createUser(data: CreateUser!): User!
+  deleteCategory(id: String!): Category!
   login(data: Login!): Auth!
+  updateCategory(data: UpsertCategory!, id: String!): Category!
 }
 
 type Query {
   findUserById(userId: String!): User!
-  getUser: Transaction!
+  getIdea(id: String!): Category!
+  listCategories: [Category!]!
 }
 
-type Transaction {
-  email: String!
-  id: ID!
-  password: String!
+input UpsertCategory {
+  color: String!
+  description: String
+  icon: String!
+  title: String!
 }
 
 type User {
   email: String!
   id: ID!
-  password: String!
 }

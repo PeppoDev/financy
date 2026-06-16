@@ -6,7 +6,6 @@ export const IsAuth: MiddlewareFn<GraphqlContext> = async (
   { context },
   next,
 ) => {
-  console.log(context.user);
   if (!context.user) throw new Error("Usuário não autenticado!");
   return next();
 };
