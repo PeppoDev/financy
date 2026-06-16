@@ -9,6 +9,7 @@ import type { User } from "../generated/prisma/client.js";
 import { CryptHelper } from "../helper/crypt.helper.js";
 import { JWTHelper } from "../helper/jwt.helper.js";
 
+// TODO: create refresh token feature
 export class AuthService {
   async login(data: Login): Promise<Auth> {
     const existingUser = await prisma.user.findUnique({
