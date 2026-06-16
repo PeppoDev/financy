@@ -28,7 +28,7 @@ export class CategoryService {
     });
   }
 
-  async findById(id: string): Promise<Category> {
+  async find(id: string): Promise<Category> {
     return prisma.category.findFirstOrThrow({
       where: {
         id,

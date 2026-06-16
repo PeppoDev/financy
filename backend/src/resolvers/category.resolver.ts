@@ -10,7 +10,7 @@ import {
 
 import { UpsertCategory } from "../dtos/input/category.js";
 import { Category } from "../dtos/output/category.js";
-import type { User } from "../dtos/output/user.js";
+import { User } from "../dtos/output/user.js";
 import { GqlUser } from "../graphql/decorator/user.decorator.js";
 import { IsAuth } from "../middleware/auth.middleware.js";
 import { CategoryService } from "../services/category.service.js";
@@ -54,11 +54,11 @@ export class CategoryResolver {
   }
 
   @Query(() => Category)
-  async getIdea(@Arg("id", () => String) id: string): Promise<Category> {
-    return this.categoryService.findById(id);
+  async getCategory(@Arg("id", () => String) id: string): Promise<Category> {
+    return this.categoryService.find(id);
   }
 
-  @FieldResolver(() => Category)
+  @FieldResolver(() => User)
   async author(@Root() category: Category): Promise<User> {
     return this.userService.find(category.authorId);
   }

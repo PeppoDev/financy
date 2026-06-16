@@ -25,6 +25,11 @@ input CreateUser {
   password: String!
 }
 
+"""
+A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.This scalar is serialized to a string in ISO 8601 format and parsed from a string in ISO 8601 format.
+"""
+scalar DateTimeISO
+
 input Login {
   email: String!
   password: String!
@@ -32,16 +37,33 @@ input Login {
 
 type Mutation {
   createCategory(data: UpsertCategory!): Category!
+  createTransaction(data: UpsertTransaction!): Transaction!
   createUser(data: CreateUser!): User!
   deleteCategory(id: String!): Category!
+  deleteTransaction(id: String!): Transaction!
   login(data: Login!): Auth!
   updateCategory(data: UpsertCategory!, id: String!): Category!
+  updateTransaction(data: UpsertTransaction!, id: String!): Transaction!
 }
 
 type Query {
   findUserById(userId: String!): User!
-  getIdea(id: String!): Category!
+  getCategory(id: String!): Category!
+  getTransaction(id: String!): Transaction!
   listCategories: [Category!]!
+  listTransactions: [Transaction!]!
+}
+
+type Transaction {
+  author: User
+  authorId: String!
+  category: Category
+  categoryId: String!
+  date: DateTimeISO!
+  description: String!
+  id: ID!
+  type: String!
+  value: Float!
 }
 
 input UpsertCategory {
@@ -49,6 +71,14 @@ input UpsertCategory {
   description: String
   icon: String!
   title: String!
+}
+
+input UpsertTransaction {
+  categoryId: String!
+  date: DateTimeISO!
+  description: String!
+  type: String!
+  value: Float!
 }
 
 type User {
