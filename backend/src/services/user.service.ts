@@ -1,5 +1,6 @@
 import { prisma } from "../../prisma/prisma.js";
 import type { CreateUser, UpdateUser } from "../dtos/input/user.js";
+import { ConflictException } from "../exceptions/graphql.exception.js";
 import { CryptHelper } from "../helper/crypt.helper.js";
 
 export class UserService {
@@ -26,7 +27,7 @@ export class UserService {
       },
     });
 
-    if (findUser) throw new Error("Usuário já cadastrado!");
+    if (findUser) throw new ConflictException("User already registered!");
 
     return prisma.user.create({
       data: {

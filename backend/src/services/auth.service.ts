@@ -2,6 +2,10 @@ import { prisma } from "../../prisma/prisma.js";
 import type { Login } from "../dtos/input/login.js";
 import type { Auth } from "../dtos/output/auth.js";
 import type { User } from "../generated/prisma/client.js";
+import {
+  NotFoundException,
+  UnauthorizedException,
+} from "../exceptions/graphql.exception.js";
 import { CryptHelper } from "../helper/crypt.helper.js";
 import { JWTHelper } from "../helper/jwt.helper.js";
 
@@ -14,28 +18,29 @@ export class AuthService {
     });
 
     if (!existingUser || !existingUser.password)
-      throw new Error("Usuário não cadastrado!");
+      throw new NotFoundException("User not found!");
 
     const compare = await CryptHelper.compare(
       data.password,
       existingUser.password,
     );
 
-    // TODO: create custom exception
-    if (!compare) throw new Error("Senha inválida!");
+    if (!compare) throw new UnauthorizedException("Invalid password!");
     const tokens = this.generateTokens(existingUser);
 
     return { ...tokens, user: existingUser };
   }
 
-  // TODO: Change the value here
   generateTokens(user: User) {
+    const minutes15 = 15 * 60;
+    const day = 24 * 60 * 60;
+
     const token = JWTHelper.signJwt(
       {
         id: user.id,
         email: user.email,
       },
-      "15m",
+      minutes15,
     );
 
     const refreshToken = JWTHelper.signJwt(
@@ -43,7 +48,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
       },
-      "1d",
+      day,
     );
 
     return { token, refreshToken };

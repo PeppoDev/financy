@@ -1,6 +1,7 @@
 import { createParameterDecorator, type ResolverData } from "type-graphql";
 
 import { prisma } from "../../../prisma/prisma.js";
+import { NotFoundException } from "../../exceptions/graphql.exception.js";
 import type { User } from "../../generated/prisma/client.js";
 import type { GraphqlContext } from "../context/index.js";
 
@@ -15,10 +16,10 @@ export const GqlUser = () => {
             id: context.user,
           },
         });
-        if (!user) throw new Error("Usuário não encontrado");
+        if (!user) throw new NotFoundException("User not found");
         return user;
       } catch (error) {
-        console.log("Error ao instanciar o gqluser");
+        console.log("Error when instantiating gqluser");
         return null;
       }
     },
