@@ -2,7 +2,7 @@ import { gql } from "@apollo/client";
 
 export const CREATE_USER = gql`
   mutation CreateUser($data: CreateUser!) {
-    register(data: $data) {
+    createUser(data: $data) {
       id
       email
       name

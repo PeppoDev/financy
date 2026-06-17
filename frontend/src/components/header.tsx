@@ -1,9 +1,10 @@
 import { cva } from "class-variance-authority";
-import { NavLink, useLocation, useMatch } from "react-router-dom";
+import { NavLink, useLocation, useMatch, useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.svg";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const navItemVariants = cva("no-underline hover:no-underline", {
   variants: {
@@ -47,9 +48,20 @@ function HeaderNavItem({ label, to, end }: HeaderNavItemProps) {
 
 export function Header() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  // const {
+  //   user: { name },
+  // } = useAuthStore();
 
-  if (!pathname.startsWith("/dashboard")) {
+  const shouldShowHeader =
+    pathname.startsWith("/dashboard") || pathname.startsWith("/account");
+
+  if (!shouldShowHeader) {
     return null;
+  }
+
+  function handleNavigateToAccount() {
+    navigate("/account");
   }
 
   return (
@@ -69,7 +81,7 @@ export function Header() {
             />
           ))}
         </nav>
-        <Avatar>
+        <Avatar className="cursor-pointer" onClick={handleNavigateToAccount}>
           <AvatarImage src="https://github.com/shadcn.png" />
           <AvatarFallback>CN</AvatarFallback>
         </Avatar>

@@ -1,17 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, RegisterInput, LoginInput } from "@/types";
+import type { User, LoginInput } from "@/types";
 import { apolloClient } from "@/lib/graphql/client";
 import { LOGIN } from "@/lib/graphql/mutations/login";
-import { CREATE_USER } from "@/lib/graphql/mutations/user";
-
-type RegisterMutationData = {
-  register: {
-    token: string;
-    refreshToken: string;
-    user: User;
-  };
-};
 
 type LoginMutationData = {
   login: {
@@ -25,7 +16,6 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  // signup: (data: RegisterInput) => Promise<boolean>;
   login: (data: LoginInput) => Promise<boolean>;
   logout: () => void;
 }
@@ -58,9 +48,6 @@ export const useAuthStore = create<AuthState>()(
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
               },
               token,
               isAuthenticated: true,
@@ -73,43 +60,6 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         }
       },
-      // signup: async (registerData: RegisterInput) => {
-      //   try {
-      //     const { data } = await apolloClient.mutate<
-      //       RegisterMutationData,
-      //       { data: RegisterInput }
-      //     >({
-      //       mutation: CREATE_USER,
-      //       variables: {
-      //         data: {
-      //           name: registerData.name,
-      //           email: registerData.email,
-      //           password: registerData.password,
-      //         },
-      //       },
-      //     });
-      //     if (data?.register) {
-      //       const { token, user } = data.register;
-      //       set({
-      //         user: {
-      //           id: user.id,
-      //           name: user.name,
-      //           email: user.email,
-      //           role: user.role,
-      //           createdAt: user.createdAt,
-      //           updatedAt: user.updatedAt,
-      //         },
-      //         token,
-      //         isAuthenticated: true,
-      //       });
-      //       return true;
-      //     }
-      //     return false;
-      //   } catch (error) {
-      //     console.log("Erro ao fazer o cadastro");
-      //     throw error;
-      //   }
-      // },
       logout: () => {
         set({
           user: null,

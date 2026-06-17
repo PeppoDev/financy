@@ -1,10 +1,10 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { isAuthenticated } from "@/lib/auth";
 import { Dashboard } from "./pages/dashboard/dashboard";
 import { Signin } from "./pages/signin/signin";
 import { Signup } from "./pages/signup/signup";
 import { Transactions } from "./pages/transactions/transactions";
 import { Categories } from "./pages/categories/categories";
+import { Account } from "./pages/account/account";
 import { useAuthStore } from "./stores/auth";
 
 function RootRoute() {
@@ -22,10 +22,14 @@ type GuardedRouteProps = {
 };
 
 function ProtectedRoute({ children }: GuardedRouteProps) {
+  const { isAuthenticated } = useAuthStore();
+
   return isAuthenticated ? children : <Navigate to="/signin" replace />;
 }
 
 function GuestRoute({ children }: GuardedRouteProps) {
+  const { isAuthenticated } = useAuthStore();
+
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 }
 
@@ -70,6 +74,14 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <Categories />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <Account />
           </ProtectedRoute>
         }
       />

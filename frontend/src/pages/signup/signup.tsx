@@ -27,9 +27,13 @@ import {
 } from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
 import { type SignupFormValues, useSignupForm } from "./signup-form";
+import { apolloClient } from "@/lib/graphql/client";
+import { CREATE_USER } from "@/lib/graphql/mutations/user";
+import { toast } from "sonner";
 
 export function Signup() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const {
     register,
@@ -37,8 +41,35 @@ export function Signup() {
     formState: { errors },
   } = useSignupForm();
 
-  function onSubmit(_data: SignupFormValues) {
-    navigate("/signin");
+  async function onSubmit(data: SignupFormValues) {
+    setIsLoading(true);
+    try {
+      const { data: mutationData } = await apolloClient.mutate<
+        { createUser: { id: string; email: string; name: string } },
+        { data: { name: string; email: string; password: string } }
+      >({
+        mutation: CREATE_USER,
+        variables: {
+          data: {
+            name: data.fullName,
+            email: data.email,
+            password: data.password,
+          },
+        },
+      });
+
+      if (mutationData?.createUser) {
+        toast.success("Conta criada com sucesso!");
+        navigate("/signin");
+        return;
+      }
+
+      toast.error("Nao foi possivel criar sua conta.");
+    } catch {
+      toast.error("Falha ao criar conta.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -145,6 +176,7 @@ export function Signup() {
                     <InputGroupButton
                       aria-label="Change password visibility"
                       title="Change password visibility"
+                      disabled={isLoading}
                       onClick={() => setIsPasswordVisible(!isPasswordVisible)}
                     >
                       {isPasswordVisible ? <EyeIcon /> : <EyeClosedIcon />}
@@ -165,7 +197,7 @@ export function Signup() {
           </CardContent>
 
           <CardFooter className="flex flex-col p-0 gap-6">
-            <Button className="w-full" size="lg" type="submit">
+            <Button className="w-full" size="lg" type="submit" disabled={isLoading}>
               Cadastrar
             </Button>
 
