@@ -3,6 +3,7 @@ import "dotenv/config";
 
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
+import cors from "cors";
 import express from "express";
 import { buildSchema } from "type-graphql";
 
@@ -14,6 +15,12 @@ import { UserResolver } from "./resolvers/user.resolver.js";
 
 async function bootstrap() {
   const server = express();
+  server.use(
+    cors({
+      origin: "http://localhost:5173",
+      credentials: true,
+    }),
+  );
 
   const schema = await buildSchema({
     resolvers: [
@@ -30,6 +37,7 @@ async function bootstrap() {
     schema,
   });
   await apolloServer.start();
+
   server.use(
     "/graphql",
     express.json(),

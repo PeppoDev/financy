@@ -12,6 +12,7 @@ export class AuthResolver {
 
   @Mutation(() => Auth)
   async login(@Arg("data", () => Login) data: Login): Promise<Auth> {
+    console.log(data);
     return this.authService.login(data);
   }
 }

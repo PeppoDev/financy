@@ -19,8 +19,8 @@ const navItemVariants = cva("no-underline hover:no-underline", {
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", end: true },
-  { label: "Transacoes", to: "/dashboard/transacoes", end: false },
-  { label: "Categorias", to: "/dashboard/categorias", end: false },
+  { label: "Transacoes", to: "/dashboard/transactions", end: false },
+  { label: "Categorias", to: "/dashboard/categories", end: false },
 ];
 
 type HeaderNavItemProps = {

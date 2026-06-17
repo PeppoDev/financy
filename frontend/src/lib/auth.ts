@@ -1,7 +1,7 @@
-const AUTH_STORAGE_KEY = "financy:is-authenticated";
+const AUTH_STORAGE_KEY = "financy";
 
 export function isAuthenticated() {
-  return localStorage.getItem(AUTH_STORAGE_KEY) === "true";
+  return localStorage.getItem(AUTH_STORAGE_KEY);
 }
 
 export function persistAuthSession() {

@@ -27,10 +27,12 @@ import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { Controller } from "react-hook-form";
 import { type SigninFormValues, useSigninForm } from "./signin-form";
-import { persistAuthSession } from "@/lib/auth";
+import { useAuthStore } from "@/stores/auth";
+import { toast } from "sonner";
 
 export function Signin() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const {
     register,
@@ -39,9 +41,23 @@ export function Signin() {
     formState: { errors },
   } = useSigninForm();
 
-  function onSubmit(_data: SigninFormValues) {
-    persistAuthSession();
-    navigate("/dashboard");
+  const login = useAuthStore((state) => state.login);
+
+  async function onSubmit(data: SigninFormValues) {
+    try {
+      const loginMutate = await login({
+        email: data.email,
+        password: data.password,
+      });
+      if (loginMutate) {
+        toast.success("Login realizado com sucesso!");
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      toast.error("Falha ao realizar o login!");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -115,6 +131,7 @@ export function Signin() {
                     <InputGroupButton
                       aria-label="Change password visibility"
                       title="Change Password visibility"
+                      disabled={isLoading}
                       onClick={() => setIsPasswordVisible(!isPasswordVisible)}
                     >
                       {isPasswordVisible ? <EyeIcon /> : <EyeClosedIcon />}
@@ -152,14 +169,16 @@ export function Signin() {
                     Lembrar-me
                   </FieldLabel>
                 </Field>
-                <Button variant="link" asChild>
-                  <Link to="/forgot-passwork">Recuperar senha</Link>
-                </Button>
               </div>
             </FieldGroup>
           </CardContent>
           <CardFooter className="flex flex-col p-0 gap-6">
-            <Button className="w-full" size="lg" type="submit">
+            <Button
+              className="w-full"
+              size="lg"
+              type="submit"
+              disabled={isLoading}
+            >
               Entrar
             </Button>
             <div className="flex flex-row items-center w-full gap-3">

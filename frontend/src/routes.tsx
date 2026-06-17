@@ -5,9 +5,12 @@ import { Signin } from "./pages/signin/signin";
 import { Signup } from "./pages/signup/signup";
 import { Transactions } from "./pages/transactions/transactions";
 import { Categories } from "./pages/categories/categories";
+import { useAuthStore } from "./stores/auth";
 
 function RootRoute() {
-  return isAuthenticated() ? (
+  const { isAuthenticated } = useAuthStore();
+
+  return isAuthenticated ? (
     <Navigate to="/dashboard" replace />
   ) : (
     <Navigate to="/signin" replace />
@@ -19,11 +22,11 @@ type GuardedRouteProps = {
 };
 
 function ProtectedRoute({ children }: GuardedRouteProps) {
-  return isAuthenticated() ? children : <Navigate to="/signin" replace />;
+  return isAuthenticated ? children : <Navigate to="/signin" replace />;
 }
 
 function GuestRoute({ children }: GuardedRouteProps) {
-  return isAuthenticated() ? <Navigate to="/dashboard" replace /> : children;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 }
 
 export function AppRoutes() {
@@ -55,7 +58,7 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/transacoes"
+        path="/dashboard/transactions"
         element={
           <ProtectedRoute>
             <Transactions />
@@ -63,7 +66,7 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/dashboard/categorias"
+        path="/dashboard/categories"
         element={
           <ProtectedRoute>
             <Categories />

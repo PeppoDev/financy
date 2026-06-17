@@ -7,7 +7,7 @@ export const signinSchema = z.object({
   password: z
     .string()
     .min(1, "Informe a senha")
-    .min(8, "A senha deve ter no minimo 8 caracteres"),
+    .min(3, "A senha deve ter no minimo 8 caracteres"),
   rememberData: z.boolean(),
 });
 

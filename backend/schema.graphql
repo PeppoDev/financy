@@ -84,4 +84,5 @@ input UpsertTransaction {
 type User {
   email: String!
   id: ID!
+  name: String!
 }
