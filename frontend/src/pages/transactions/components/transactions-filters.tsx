@@ -44,7 +44,7 @@ export function TransactionsFilters({
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Buscar por descrição"
-            className="h-11 pl-9"
+            className="h-11 rounded-lg border border-gray-300 bg-white px-3 pl-9 text-sm text-gray-700 shadow-none"
           />
         </div>
       </div>

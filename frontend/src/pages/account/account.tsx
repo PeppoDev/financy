@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import defaultAvatar from "@/assets/default-avatar.svg";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -85,8 +86,9 @@ export function Account() {
       <div className="w-full rounded-2xl border border-gray-200 bg-white px-7 py-8 shadow-sm">
         <div className="mb-7 flex flex-col items-center text-center">
           <Avatar className="mb-5 h-14 w-14 bg-gray-300 text-xl font-medium text-gray-700">
+            <AvatarImage src={defaultAvatar} alt="Avatar padrão" />
             <AvatarFallback className="bg-gray-300 text-gray-700">
-              CT
+              US
             </AvatarFallback>
           </Avatar>
           <h1 className="text-3xl font-semibold text-gray-900">{name}</h1>

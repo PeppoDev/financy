@@ -1,5 +1,6 @@
 import { cva } from "class-variance-authority";
 import { NavLink, useLocation, useMatch, useNavigate } from "react-router-dom";
+import defaultAvatar from "@/assets/default-avatar.svg";
 import logo from "@/assets/logo.svg";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -81,8 +82,8 @@ export function Header() {
           ))}
         </nav>
         <Avatar className="cursor-pointer" onClick={handleNavigateToAccount}>
-          <AvatarImage src="https://github.com/shadcn.png" />
-          <AvatarFallback>CN</AvatarFallback>
+          <AvatarImage src={defaultAvatar} alt="Avatar padrão" />
+          <AvatarFallback>US</AvatarFallback>
         </Avatar>
       </main>
     </header>
