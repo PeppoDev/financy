@@ -33,15 +33,15 @@ export class AuthService {
   }
 
   generateTokens(user: User) {
-    const minutes15 = 15 * 60;
-    const day = 24 * 60 * 60;
+    const oneHourInSeconds = 60 * 60;
+    const twentyFourHoursInSeconds = 24 * 60 * 60;
 
     const token = JWTHelper.signJwt(
       {
         id: user.id,
         email: user.email,
       },
-      minutes15,
+      oneHourInSeconds,
     );
 
     const refreshToken = JWTHelper.signJwt(
@@ -49,7 +49,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
       },
-      day,
+      twentyFourHoursInSeconds,
     );
 
     return { token, refreshToken };
