@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { ArrowDownCircle, ArrowUpCircle, Tag, Trash2 } from "lucide-react";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  ChevronLeft,
+  ChevronRight,
+  Tag,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +28,8 @@ export type TransactionTableRowData = {
   id: string;
   description: string;
   date: string;
+  dateISO: string;
+  categoryId: string;
   categoryTitle: string;
   categoryIcon: string;
   categoryColor: string;
@@ -34,6 +43,12 @@ type TransactionsTableProps = {
   isDeletingId: string | null;
   onDelete: (id: string) => void;
   emptyMessage: string;
+  currentPage: number;
+  totalPages: number;
+  totalResults: number;
+  resultStart: number;
+  resultEnd: number;
+  onPageChange: (page: number) => void;
 };
 
 const colorStylesByValue: Record<
@@ -81,12 +96,30 @@ const colorStylesByValue: Record<
   },
 };
 
+function buildVisiblePages(currentPage: number, totalPages: number): number[] {
+  if (totalPages <= 3) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const start = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+
+  return [start, start + 1, start + 2];
+}
+
 export function TransactionsTable({
   data,
   isDeletingId,
   onDelete,
   emptyMessage,
+  currentPage,
+  totalPages,
+  totalResults,
+  resultStart,
+  resultEnd,
+  onPageChange,
 }: TransactionsTableProps) {
+  const visiblePages = buildVisiblePages(currentPage, totalPages);
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200">
       <Table>
@@ -202,6 +235,52 @@ export function TransactionsTable({
           )}
         </TableBody>
       </Table>
+
+      <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-xs text-gray-500">
+        <span>
+          {resultStart} a {resultEnd} | {totalResults} resultados
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={currentPage <= 1}
+            onClick={() => onPageChange(currentPage - 1)}
+            className="h-7 w-7 cursor-pointer rounded-md border border-gray-200"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+
+          {visiblePages.map((page) => (
+            <Button
+              key={page}
+              type="button"
+              variant={page === currentPage ? "default" : "ghost"}
+              size="icon-xs"
+              onClick={() => onPageChange(page)}
+              className={
+                page === currentPage
+                  ? "h-7 w-7 cursor-pointer rounded-md p-0 text-xs"
+                  : "h-7 w-7 cursor-pointer rounded-md border border-gray-200 text-xs"
+              }
+            >
+              {page}
+            </Button>
+          ))}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={currentPage >= totalPages}
+            onClick={() => onPageChange(currentPage + 1)}
+            className="h-7 w-7 cursor-pointer rounded-md border border-gray-200"
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
