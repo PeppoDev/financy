@@ -13,6 +13,7 @@ import {
 } from "@/lib/graphql/types/transaction";
 import { NewTransactionModal } from "@/pages/dashboard/components/new-transaction-modal";
 import { toast } from "sonner";
+import { TransactionsFilters } from "./components/transactions-filters";
 import {
   TransactionsTable,
   type TransactionTableRowData,
@@ -29,8 +30,54 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const ITEMS_PER_PAGE = 10;
+
+type TransactionTypeFilter = "all" | "entrada" | "saida";
+
 function mapBackendTypeToView(type: string): "entrada" | "saida" {
   return type === "income" ? "entrada" : "saida";
+}
+
+function normalizeText(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function buildPeriodKey(dateISO: string): string | null {
+  const parsedDate = new Date(dateISO);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  const year = parsedDate.getUTCFullYear();
+  const month = `${parsedDate.getUTCMonth() + 1}`.padStart(2, "0");
+
+  return `${year}-${month}`;
+}
+
+function formatPeriodLabel(periodKey: string): string {
+  const [yearString, monthString] = periodKey.split("-");
+  const year = Number(yearString);
+  const month = Number(monthString);
+
+  if (Number.isNaN(year) || Number.isNaN(month)) {
+    return periodKey;
+  }
+
+  const periodDate = new Date(Date.UTC(year, month - 1, 1));
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+    .format(periodDate)
+    .replace(" de ", " / ");
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 export function Transactions() {
@@ -38,6 +85,11 @@ export function Transactions() {
   const [deletingTransactionId, setDeletingTransactionId] = useState<
     string | null
   >(null);
+  const [searchValue, setSearchValue] = useState("");
+  const [typeValue, setTypeValue] = useState<TransactionTypeFilter>("all");
+  const [categoryValue, setCategoryValue] = useState("all");
+  const [periodValue, setPeriodValue] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const {
     data: transactionsData,
@@ -68,6 +120,8 @@ export function Transactions() {
           date: Number.isNaN(parsedDate.getTime())
             ? "-"
             : dateFormatter.format(parsedDate),
+          dateISO: transaction.date,
+          categoryId: transaction.category?.id ?? "uncategorized",
           categoryTitle: transaction.category?.title ?? "Sem categoria",
           categoryIcon: transaction.category?.icon ?? "",
           categoryColor: transaction.category?.color ?? "",
@@ -98,11 +152,114 @@ export function Transactions() {
       });
   }, [transactionsData]);
 
+  const categoryOptions = useMemo(() => {
+    const categoriesMap = new Map<string, string>();
+
+    rows.forEach((row) => {
+      if (!categoriesMap.has(row.categoryId)) {
+        categoriesMap.set(row.categoryId, row.categoryTitle);
+      }
+    });
+
+    return Array.from(categoriesMap.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [rows]);
+
+  const periodOptions = useMemo(() => {
+    const periods = new Set<string>();
+
+    rows.forEach((row) => {
+      const periodKey = buildPeriodKey(row.dateISO);
+
+      if (periodKey) {
+        periods.add(periodKey);
+      }
+    });
+
+    return Array.from(periods)
+      .sort((a, b) => b.localeCompare(a))
+      .map((value) => ({
+        value,
+        label: formatPeriodLabel(value),
+      }));
+  }, [rows]);
+
+  const effectivePeriodValue = useMemo(() => {
+    if (
+      periodValue &&
+      (periodValue === "all" ||
+        periodOptions.some(
+          (periodOption) => periodOption.value === periodValue,
+        ))
+    ) {
+      return periodValue;
+    }
+
+    return periodOptions[0]?.value ?? "all";
+  }, [periodOptions, periodValue]);
+
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = normalizeText(searchValue);
+
+    return rows.filter((row) => {
+      if (
+        normalizedSearch &&
+        !normalizeText(row.description).includes(normalizedSearch)
+      ) {
+        return false;
+      }
+
+      if (typeValue !== "all" && row.type !== typeValue) {
+        return false;
+      }
+
+      if (categoryValue !== "all" && row.categoryId !== categoryValue) {
+        return false;
+      }
+
+      if (effectivePeriodValue !== "all") {
+        const periodKey = buildPeriodKey(row.dateISO);
+
+        if (periodKey !== effectivePeriodValue) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [rows, searchValue, typeValue, categoryValue, effectivePeriodValue]);
+
+  const totalResults = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / ITEMS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedRows = useMemo(() => {
+    const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+
+    return filteredRows.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredRows, safeCurrentPage]);
+
+  const resultStart =
+    totalResults === 0 ? 0 : (safeCurrentPage - 1) * ITEMS_PER_PAGE + 1;
+  const resultEnd =
+    totalResults === 0
+      ? 0
+      : Math.min(safeCurrentPage * ITEMS_PER_PAGE, totalResults);
+
+  const hasActiveFilters =
+    Boolean(searchValue.trim()) ||
+    typeValue !== "all" ||
+    categoryValue !== "all" ||
+    effectivePeriodValue !== "all";
+
   const emptyMessage = loading
     ? "Carregando transações..."
     : error
       ? "Não foi possível carregar suas transações."
-      : "Nenhuma transação encontrada.";
+      : hasActiveFilters
+        ? "Nenhuma transação encontrada para os filtros aplicados."
+        : "Nenhuma transação encontrada.";
 
   async function invalidateTransactionsQueryAndRefetch(): Promise<void> {
     apolloClient.cache.evict({
@@ -138,6 +295,26 @@ export function Transactions() {
     }
   }
 
+  function handleSearchChange(value: string) {
+    setSearchValue(value);
+    setCurrentPage(1);
+  }
+
+  function handleTypeChange(value: string) {
+    setTypeValue(value as TransactionTypeFilter);
+    setCurrentPage(1);
+  }
+
+  function handleCategoryChange(value: string) {
+    setCategoryValue(value);
+    setCurrentPage(1);
+  }
+
+  function handlePeriodChange(value: string) {
+    setPeriodValue(value);
+    setCurrentPage(1);
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-6">
       <div className="flex items-end justify-between">
@@ -156,12 +333,31 @@ export function Transactions() {
       </div>
 
       <Card className="bg-white">
-        <CardContent className="p-4">
+        <CardContent className="space-y-5 p-4">
+          <TransactionsFilters
+            searchValue={searchValue}
+            onSearchChange={handleSearchChange}
+            typeValue={typeValue}
+            onTypeChange={handleTypeChange}
+            categoryValue={categoryValue}
+            onCategoryChange={handleCategoryChange}
+            periodValue={effectivePeriodValue}
+            onPeriodChange={handlePeriodChange}
+            categoryOptions={categoryOptions}
+            periodOptions={periodOptions}
+          />
+
           <TransactionsTable
-            data={rows}
+            data={paginatedRows}
             isDeletingId={deletingTransactionId}
             onDelete={handleDeleteTransaction}
             emptyMessage={emptyMessage}
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            totalResults={totalResults}
+            resultStart={resultStart}
+            resultEnd={resultEnd}
+            onPageChange={setCurrentPage}
           />
         </CardContent>
       </Card>
