@@ -34,6 +34,25 @@ export function formatBrlFromDigits(value: string) {
   });
 }
 
+export function formatBrlFromNumber(value: number) {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function parseBrlToNumber(value: string) {
+  const normalized = value.replace(/\./g, "").replace(",", ".").trim();
+
+  const parsed = Number.parseFloat(normalized);
+
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+
+  return parsed;
+}
+
 export function useNewTransactionForm() {
   return useForm<NewTransactionFormValues>({
     mode: "onBlur",

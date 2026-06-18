@@ -1,7 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { ArrowDownCircle, ArrowUpCircle, CalendarDays, X } from "lucide-react";
+import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  CalendarDays,
+  Tag,
+  X,
+} from "lucide-react";
 
-import { categoriesMap, type CategoryKey } from "@/lib/categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,31 +33,120 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  CREATE_TRANSACTION,
+  UPDATE_TRANSACTION,
+} from "@/lib/graphql/mutations/transaction";
+import { GET_CATEGORIES } from "@/lib/graphql/queries/category";
+import { GET_TRANSACTIONS } from "@/lib/graphql/queries/transaction";
+import { type ListCategoriesQueryData } from "@/lib/graphql/types/category";
+import {
+  type CreateTransactionMutationData,
+  type CreateTransactionMutationVariables,
+  type UpdateTransactionMutationData,
+  type UpdateTransactionMutationVariables,
+} from "@/lib/graphql/types/transaction";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  categoryColorOptions,
+  categoryIconOptions,
+} from "@/utils/category/category-enums";
 import {
   formatBrlFromDigits,
+  formatBrlFromNumber,
+  parseBrlToNumber,
   useNewTransactionForm,
+  type NewTransactionFormValues,
 } from "../new-transaction-form";
+
+type EditableTransaction = {
+  id: string;
+  type: string;
+  description: string;
+  date: string;
+  value: number;
+  categoryId: string;
+};
 
 type NewTransactionModalProps = {
   children: ReactNode;
+  transaction?: EditableTransaction;
 };
-
-const categories = Object.values(categoriesMap);
 
 function formatDate(date: Date) {
   return date.toLocaleDateString("pt-BR");
 }
 
-export function NewTransactionModal({ children }: NewTransactionModalProps) {
+function mapBackendTypeToForm(
+  type: string,
+): NewTransactionFormValues["transactionType"] {
+  return type === "income" ? "receita" : "despesa";
+}
+
+function mapFormTypeToBackend(
+  type: NewTransactionFormValues["transactionType"],
+): string {
+  return type === "receita" ? "income" : "outocome";
+}
+
+const EMPTY_FORM_VALUES: NewTransactionFormValues = {
+  transactionType: "despesa",
+  description: "",
+  date: undefined,
+  amount: "0,00",
+  category: "",
+};
+
+function buildTransactionFormValues(
+  transaction?: EditableTransaction,
+): NewTransactionFormValues {
+  if (!transaction) {
+    return EMPTY_FORM_VALUES;
+  }
+
+  const parsedDate = new Date(transaction.date);
+
+  return {
+    transactionType: mapBackendTypeToForm(transaction.type),
+    description: transaction.description,
+    date: Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate,
+    amount: formatBrlFromNumber(Math.abs(transaction.value)),
+    category: transaction.categoryId,
+  };
+}
+
+export function NewTransactionModal({
+  children,
+  transaction,
+}: NewTransactionModalProps) {
+  const apolloClient = useApolloClient();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitted },
   } = useNewTransactionForm();
+
+  const [createTransaction, { loading: isCreating }] = useMutation<
+    CreateTransactionMutationData,
+    CreateTransactionMutationVariables
+  >(CREATE_TRANSACTION);
+  const [updateTransaction, { loading: isUpdating }] = useMutation<
+    UpdateTransactionMutationData,
+    UpdateTransactionMutationVariables
+  >(UPDATE_TRANSACTION);
+
+  const { data: categoriesData } =
+    useQuery<ListCategoriesQueryData>(GET_CATEGORIES);
+
+  const isUpdateMode = Boolean(transaction);
+  const isLoading = isCreating || isUpdating;
 
   const transactionType = watch("transactionType");
   const category = watch("category");
@@ -68,10 +163,83 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
     });
   }
 
-  const onSubmit = handleSubmit(() => undefined);
+  function handleOpenChange(open: boolean) {
+    setIsOpen(open);
+
+    if (open) {
+      reset(buildTransactionFormValues(transaction));
+      return;
+    }
+
+    setDatePickerOpen(false);
+    reset(EMPTY_FORM_VALUES);
+  }
+
+  async function invalidateTransactionsQueryAndRefetch(): Promise<void> {
+    apolloClient.cache.evict({
+      id: "ROOT_QUERY",
+      fieldName: "listTransactions",
+    });
+    apolloClient.cache.gc();
+
+    await apolloClient.refetchQueries({
+      include: [GET_TRANSACTIONS],
+    });
+  }
+
+  async function onSubmit(values: NewTransactionFormValues): Promise<void> {
+    if (!values.date) {
+      return;
+    }
+
+    try {
+      const dataInput = {
+        type: mapFormTypeToBackend(values.transactionType),
+        description: values.description.trim(),
+        date: values.date,
+        value: parseBrlToNumber(values.amount),
+        categoryId: values.category,
+      };
+
+      if (isUpdateMode && transaction) {
+        const { data } = await updateTransaction({
+          variables: {
+            id: transaction.id,
+            data: dataInput,
+          },
+        });
+
+        if (data?.updateTransaction) {
+          await invalidateTransactionsQueryAndRefetch();
+          toast.success("Transação atualizada com sucesso!");
+          setIsOpen(false);
+          reset(EMPTY_FORM_VALUES);
+          return;
+        }
+      } else {
+        const { data } = await createTransaction({
+          variables: {
+            data: dataInput,
+          },
+        });
+
+        if (data?.createTransaction) {
+          await invalidateTransactionsQueryAndRefetch();
+          toast.success("Transação criada com sucesso!");
+          setIsOpen(false);
+          reset(EMPTY_FORM_VALUES);
+          return;
+        }
+      }
+
+      toast.error("Não foi possível salvar a transação.");
+    } catch {
+      toast.error("Não foi possível salvar a transação.");
+    }
+  }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
         showCloseButton={false}
@@ -80,7 +248,7 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
         <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
           <DialogHeader className="gap-1">
             <DialogTitle className="text-xl font-semibold text-gray-800">
-              Nova transação
+              {isUpdateMode ? "Editar transação" : "Nova transação"}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
               Registre sua despesa ou receita
@@ -91,7 +259,8 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
             <Button
               variant="ghost"
               size="icon-sm"
-              className="rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-100"
+              disabled={isLoading}
+              className="cursor-pointer rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-100"
             >
               <X className="size-4" />
               <span className="sr-only">Fechar modal</span>
@@ -99,12 +268,13 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
           </DialogClose>
         </div>
 
-        <form className="space-y-5 px-6 py-5" onSubmit={onSubmit}>
+        <form className="space-y-5 px-6 py-5" onSubmit={handleSubmit(onSubmit)}>
           <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-1">
             <button
               type="button"
+              disabled={isLoading}
               className={cn(
-                "flex h-11 items-center justify-center gap-2 rounded-lg border text-base font-medium transition-colors",
+                "flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border text-base font-medium transition-colors",
                 transactionType === "despesa"
                   ? "border-red-400 bg-white text-gray-800"
                   : "border-transparent text-gray-500 hover:text-gray-700",
@@ -122,8 +292,9 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
 
             <button
               type="button"
+              disabled={isLoading}
               className={cn(
-                "flex h-11 items-center justify-center gap-2 rounded-lg border text-base font-medium transition-colors",
+                "flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border text-base font-medium transition-colors",
                 transactionType === "receita"
                   ? "border-emerald-500 bg-white text-gray-800"
                   : "border-transparent text-gray-500 hover:text-gray-700",
@@ -145,11 +316,12 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
               htmlFor="transaction-description"
               className="text-lg font-medium text-gray-700"
             >
-              Descricao
+              Descrição
             </Label>
             <Input
               id="transaction-description"
-              placeholder="Ex. Almoco no restaurante"
+              placeholder="Ex. Almoço no restaurante"
+              disabled={isLoading}
               {...register("description")}
             />
           </div>
@@ -168,8 +340,9 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
                     id="transaction-date"
                     type="button"
                     variant="outline"
+                    disabled={isLoading}
                     className={cn(
-                      "h-12 w-full justify-between rounded-lg border border-gray-300 bg-white px-3.5 text-left text-base font-normal shadow-none hover:bg-white",
+                      "h-12 w-full cursor-pointer justify-between rounded-lg border border-gray-300 bg-white px-3.5 text-left text-base font-normal shadow-none hover:bg-white",
                       isSubmitted && errors.date && "border-destructive",
                       date ? "text-gray-800" : "text-gray-400",
                     )}
@@ -214,6 +387,7 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
                   value={amount}
                   onChange={(event) => handleAmountChange(event.target.value)}
                   inputMode="numeric"
+                  disabled={isLoading}
                   className="h-full border-none px-0 py-0 shadow-none focus-visible:border-transparent focus-visible:shadow-none"
                   placeholder="0,00"
                 />
@@ -231,7 +405,7 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
             <Select
               value={category}
               onValueChange={(value) =>
-                setValue("category", value as CategoryKey, {
+                setValue("category", value, {
                   shouldDirty: true,
                   shouldValidate: true,
                   shouldTouch: true,
@@ -241,7 +415,7 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
               <SelectTrigger
                 id="transaction-category"
                 className={cn(
-                  "h-12 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-base text-gray-500 shadow-none data-placeholder:text-gray-400",
+                  "h-12 w-full cursor-pointer rounded-lg border border-gray-300 bg-white px-3.5 text-base text-gray-500 shadow-none data-placeholder:text-gray-400",
                   isSubmitted && errors.category && "border-destructive",
                 )}
               >
@@ -249,25 +423,31 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
               </SelectTrigger>
 
               <SelectContent className="overflow-hidden rounded-xl border border-gray-200 bg-white p-0 shadow-lg">
-                {categories.map((item) => {
-                  const Icon = item.icon;
+                {(categoriesData?.listCategories ?? []).map((item) => {
+                  const iconOption = categoryIconOptions.find(
+                    (option) => option.enumValue === item.icon,
+                  );
+                  const colorOption = categoryColorOptions.find(
+                    (option) => option.enumValue === item.color,
+                  );
+                  const Icon = iconOption?.icon ?? Tag;
 
                   return (
                     <SelectItem
-                      key={item.key}
-                      value={item.key}
-                      className="rounded-none px-4 py-3 text-base font-medium text-gray-800 hover:bg-gray-50"
+                      key={item.id}
+                      value={item.id}
+                      className="cursor-pointer rounded-none px-4 py-3 text-base font-medium text-gray-800 hover:bg-gray-50"
                     >
                       <span className="flex items-center gap-2">
                         <span
                           className={cn(
-                            "flex size-5 items-center justify-center rounded-full",
-                            item.iconContainerClassName,
+                            "flex size-5 items-center justify-center rounded-full bg-gray-100",
+                            colorOption?.swatch,
                           )}
                         >
-                          <Icon className={cn("size-3", item.iconClassName)} />
+                          <Icon className="size-3 text-white" />
                         </span>
-                        {item.label}
+                        {item.title}
                       </span>
                     </SelectItem>
                   );
@@ -283,10 +463,10 @@ export function NewTransactionModal({ children }: NewTransactionModalProps) {
 
           <Button
             type="submit"
-            disabled={!canSubmit}
-            className="h-11 w-full rounded-lg text-base font-medium"
+            disabled={!canSubmit || isLoading}
+            className="h-11 w-full cursor-pointer rounded-lg text-base font-medium"
           >
-            Salvar
+            {isUpdateMode ? "Salvar alterações" : "Salvar"}
           </Button>
         </form>
       </DialogContent>

@@ -25,6 +25,12 @@ type CategoryCardData = {
   color: string;
 };
 
+type MostUsedCategoryData = {
+  title: string;
+  icon: string;
+  color: string;
+};
+
 function normalizeCategoryTitle(value: string) {
   return value.trim().toLowerCase();
 }
@@ -83,8 +89,8 @@ export function Categories() {
 
   const totalTransactions = transactionsData?.listTransactions.length ?? 0;
 
-  const mostUsedCategory = useMemo<string | null>(() => {
-    let currentMostUsedTitle: string | null = null;
+  const mostUsedCategory = useMemo<MostUsedCategoryData | null>(() => {
+    let currentMostUsedCategory: MostUsedCategoryData | null = null;
     let currentMostUsedCount = 0;
 
     for (const category of categories) {
@@ -93,11 +99,15 @@ export function Categories() {
 
       if (categoryCount > currentMostUsedCount) {
         currentMostUsedCount = categoryCount;
-        currentMostUsedTitle = category.title;
+        currentMostUsedCategory = {
+          title: category.title,
+          icon: category.icon,
+          color: category.color,
+        };
       }
     }
 
-    return currentMostUsedTitle;
+    return currentMostUsedCategory;
   }, [categories, categoryItemsByTitle]);
 
   const emptyMessage = loading

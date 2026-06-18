@@ -27,7 +27,6 @@ model User {
   @@map("users")
 }
 
-// TODO: create enum for icon and color
 model Category {
   id          String  @id @default(uuid())
   title       String

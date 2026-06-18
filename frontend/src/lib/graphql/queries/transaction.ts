@@ -9,7 +9,10 @@ export const GET_TRANSACTIONS = gql`
       date
       value
       category {
+        id
         title
+        icon
+        color
       }
     }
   }

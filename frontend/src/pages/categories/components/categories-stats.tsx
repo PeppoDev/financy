@@ -1,11 +1,20 @@
-import { ArrowUpDown, Tag, Utensils } from "lucide-react";
+import { ArrowUpDown, Tag } from "lucide-react";
 
 import { Card, CardTitle } from "@/components/ui/card";
+import {
+  categoryColorOptions,
+  categoryIconOptions,
+} from "@/utils/category/category-enums";
+import { cn } from "@/lib/utils";
 
 type CategoriesStatsProps = {
   totalCategories: number;
   totalTransactions: number;
-  mostUsedCategory: string | null;
+  mostUsedCategory: {
+    title: string;
+    icon: string;
+    color: string;
+  } | null;
 };
 
 export function CategoriesStats({
@@ -45,12 +54,32 @@ export function CategoriesStats({
 
       <Card className="bg-white p-6">
         <div className="flex flex-row items-start gap-4">
-          {mostUsedCategory ? (
-            <Utensils className="m-2 size-6 text-blue-base" />
-          ) : null}
+          {mostUsedCategory
+            ? (() => {
+                const Icon =
+                  categoryIconOptions.find(
+                    (option) => option.enumValue === mostUsedCategory.icon,
+                  )?.icon ?? Tag;
+                const colorClass =
+                  categoryColorOptions.find(
+                    (option) => option.enumValue === mostUsedCategory.color,
+                  )?.swatch ?? "bg-gray-100";
+
+                return (
+                  <span
+                    className={cn(
+                      "m-1 flex size-8 items-center justify-center rounded-lg",
+                      colorClass,
+                    )}
+                  >
+                    <Icon className="size-4 text-white" />
+                  </span>
+                );
+              })()
+            : null}
           <div className="flex flex-col justify-start gap-2">
             <p className="flex items-center gap-2 text-[28px]/[32px] font-semibold text-gray-800">
-              {mostUsedCategory ?? "Sem dados"}
+              {mostUsedCategory?.title ?? "Sem dados"}
             </p>
             <CardTitle className="text-xs font-semibold tracking-wide uppercase text-gray-500">
               Categoria mais utilizada
