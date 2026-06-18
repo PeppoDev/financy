@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useMutation } from "@apollo/client/react";
+import { useApolloClient, useMutation } from "@apollo/client/react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,13 +14,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CREATE_CATEGORY } from "@/lib/graphql/mutations/category";
+import {
+  CREATE_CATEGORY,
+  UPDATE_CATEGORY,
+} from "@/lib/graphql/mutations/category";
 import { GET_CATEGORIES } from "@/lib/graphql/queries/category";
 import {
   type CreateCategoryMutationData,
   type CreateCategoryMutationVariables,
   type CreateCategoryOnSubmitParam,
   type CreateCategoryOnSubmitReturn,
+  type UpdateCategoryMutationData,
+  type UpdateCategoryMutationVariables,
 } from "@/lib/graphql/types/category";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -34,11 +39,45 @@ import {
 } from "@/utils/category/category-enums";
 import { useCategoryForm } from "../category-form";
 
-type NewCategoryModalProps = {
-  children: ReactNode;
+type EditableCategory = {
+  id: string;
+  title: string;
+  color: string;
+  icon: string;
+  description?: string | null;
 };
 
-export function NewCategoryModal({ children }: NewCategoryModalProps) {
+type NewCategoryModalProps = {
+  children: ReactNode;
+  category?: EditableCategory;
+};
+
+const EMPTY_FORM_VALUES: CreateCategoryOnSubmitParam = {
+  title: "",
+  description: "",
+  icon: "",
+  color: "",
+};
+
+function buildFormValues(
+  category?: EditableCategory,
+): CreateCategoryOnSubmitParam {
+  if (!category) {
+    return EMPTY_FORM_VALUES;
+  }
+
+  return {
+    title: category.title,
+    description: category.description?.trim() ?? "",
+    icon: isCategoryIconEnumValue(category.icon) ? category.icon : "",
+    color: isCategoryColorEnumValue(category.color) ? category.color : "",
+  };
+}
+
+export function NewCategoryModal({
+  children,
+  category,
+}: NewCategoryModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const {
     register,
@@ -49,10 +88,19 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
     formState: { errors },
   } = useCategoryForm();
 
-  const [createCategory, { loading }] = useMutation<
+  const apolloClient = useApolloClient();
+
+  const [createCategory, { loading: isCreating }] = useMutation<
     CreateCategoryMutationData,
     CreateCategoryMutationVariables
   >(CREATE_CATEGORY);
+  const [updateCategory, { loading: isUpdating }] = useMutation<
+    UpdateCategoryMutationData,
+    UpdateCategoryMutationVariables
+  >(UPDATE_CATEGORY);
+
+  const isUpdateMode = Boolean(category);
+  const isLoading = isCreating || isUpdating;
 
   const selectedColor = watch("color");
   const selectedIcon = watch("icon");
@@ -62,9 +110,24 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
   function handleOpenChange(open: boolean) {
     setIsOpen(open);
 
-    if (!open) {
-      reset();
+    if (open) {
+      reset(buildFormValues(category));
+      return;
     }
+
+    reset(EMPTY_FORM_VALUES);
+  }
+
+  async function invalidateCategoriesQueryAndRefetch(): Promise<void> {
+    apolloClient.cache.evict({
+      id: "ROOT_QUERY",
+      fieldName: "listCategories",
+    });
+    apolloClient.cache.gc();
+
+    await apolloClient.refetchQueries({
+      include: [GET_CATEGORIES],
+    });
   }
 
   async function onSubmit(
@@ -80,29 +143,47 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
 
     try {
       const description = values.description?.trim();
-      const { data } = await createCategory({
-        variables: {
-          data: {
-            title: values.title.trim(),
-            description: description || undefined,
-            icon: values.icon,
-            color: values.color,
-          },
-        },
-        refetchQueries: [{ query: GET_CATEGORIES }],
-        awaitRefetchQueries: true,
-      });
+      const dataInput = {
+        title: values.title.trim(),
+        description: description || undefined,
+        icon: values.icon,
+        color: values.color,
+      };
 
-      if (data?.createCategory) {
-        toast.success("Categoria criada com sucesso!");
-        reset();
-        setIsOpen(false);
-        return;
+      if (isUpdateMode && category) {
+        const { data } = await updateCategory({
+          variables: {
+            id: category.id,
+            data: dataInput,
+          },
+        });
+
+        if (data?.updateCategory) {
+          await invalidateCategoriesQueryAndRefetch();
+          toast.success("Categoria atualizada com sucesso!");
+          setIsOpen(false);
+          reset(EMPTY_FORM_VALUES);
+          return;
+        }
+      } else {
+        const { data } = await createCategory({
+          variables: {
+            data: dataInput,
+          },
+        });
+
+        if (data?.createCategory) {
+          await invalidateCategoriesQueryAndRefetch();
+          toast.success("Categoria criada com sucesso!");
+          setIsOpen(false);
+          reset(EMPTY_FORM_VALUES);
+          return;
+        }
       }
 
-      toast.error("Não foi possível criar a categoria.");
+      toast.error("Não foi possível salvar a categoria.");
     } catch {
-      toast.error("Não foi possível criar a categoria.");
+      toast.error("Não foi possível salvar a categoria.");
     }
   }
 
@@ -116,7 +197,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
         <div className="flex items-start justify-between px-6 py-5">
           <DialogHeader className="gap-1">
             <DialogTitle className="text-xl font-semibold text-gray-800">
-              Nova categoria
+              {isUpdateMode ? "Editar categoria" : "Nova categoria"}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
               Organize suas transações com categorias
@@ -127,8 +208,8 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Button
               variant="ghost"
               size="icon-sm"
-              disabled={loading}
-              className="rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-100"
+              disabled={isLoading}
+              className="cursor-pointer rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-100"
             >
               <X className="size-4" />
               <span className="sr-only">Fechar modal</span>
@@ -147,7 +228,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Input
               id="category-title"
               placeholder="Ex. Alimentação"
-              disabled={loading}
+              disabled={isLoading}
               {...register("title")}
             />
             {errors.title ? (
@@ -165,7 +246,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Input
               id="category-description"
               placeholder="Descrição da categoria"
-              disabled={loading}
+              disabled={isLoading}
               {...register("description")}
             />
             <p className="text-xs text-gray-500">Opcional</p>
@@ -181,9 +262,9 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  disabled={loading}
+                  disabled={isLoading}
                   className={cn(
-                    "size-10.5 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50",
+                    "size-10.5 cursor-pointer rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50",
                     selectedIconKey === enumKey &&
                       "border-primary bg-primary/10 text-primary",
                   )}
@@ -218,7 +299,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
                   key={option.enumKey}
                   type="button"
                   aria-label={option.label}
-                  disabled={loading}
+                  disabled={isLoading}
                   onClick={() =>
                     setValue("color", option.enumValue, {
                       shouldDirty: true,
@@ -227,7 +308,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
                     })
                   }
                   className={cn(
-                    "h-6 w-full rounded-md border border-gray-300",
+                    "h-6 w-full cursor-pointer rounded-md border border-gray-300",
                     option.swatch,
                     selectedColorKey === option.enumKey &&
                       "ring-2 ring-offset-1 ring-primary",
@@ -242,10 +323,10 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
 
           <Button
             type="submit"
-            disabled={loading}
-            className="h-11 w-full rounded-lg text-base font-medium"
+            disabled={isLoading}
+            className="h-11 w-full cursor-pointer rounded-lg text-base font-medium"
           >
-            Salvar
+            {isUpdateMode ? "Salvar alterações" : "Salvar"}
           </Button>
         </form>
       </DialogContent>
