@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@apollo/client/react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   EyeClosedIcon,
@@ -26,14 +27,22 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
-import { type SignupFormValues, useSignupForm } from "./signup-form";
-import { apolloClient } from "@/lib/graphql/client";
+import { useSignupForm } from "./signup-form";
 import { CREATE_USER } from "@/lib/graphql/mutations/user";
+import {
+  type CreateUserMutationData,
+  type CreateUserMutationVariables,
+  type SignupOnSubmitParam,
+  type SignupOnSubmitReturn,
+} from "@/lib/graphql/types/user";
 import { toast } from "sonner";
 
 export function Signup() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [createUser, { loading: isLoading }] = useMutation<
+    CreateUserMutationData,
+    CreateUserMutationVariables
+  >(CREATE_USER);
   const navigate = useNavigate();
   const {
     register,
@@ -41,14 +50,9 @@ export function Signup() {
     formState: { errors },
   } = useSignupForm();
 
-  async function onSubmit(data: SignupFormValues) {
-    setIsLoading(true);
+  async function onSubmit(data: SignupOnSubmitParam): SignupOnSubmitReturn {
     try {
-      const { data: mutationData } = await apolloClient.mutate<
-        { createUser: { id: string; email: string; name: string } },
-        { data: { name: string; email: string; password: string } }
-      >({
-        mutation: CREATE_USER,
+      const { data: mutationData } = await createUser({
         variables: {
           data: {
             name: data.fullName,
@@ -67,8 +71,6 @@ export function Signup() {
       toast.error("Nao foi possivel criar sua conta.");
     } catch {
       toast.error("Falha ao criar conta.");
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -197,7 +199,12 @@ export function Signup() {
           </CardContent>
 
           <CardFooter className="flex flex-col p-0 gap-6">
-            <Button className="w-full" size="lg" type="submit" disabled={isLoading}>
+            <Button
+              className="w-full"
+              size="lg"
+              type="submit"
+              disabled={isLoading}
+            >
               Cadastrar
             </Button>
 

@@ -11,15 +11,15 @@ export function Transactions() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-6">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800">Transacoes</h1>
+          <h1 className="text-2xl font-semibold text-gray-800">Transações</h1>
           <p className="text-sm text-gray-500">
-            Gerencie todas as suas transacoes financeiras
+            Gerencie todas as suas transações financeiras
           </p>
         </div>
         <NewTransactionModal>
           <Button className="h-9 rounded-md px-3 text-sm font-medium">
             <Plus className="size-4" />
-            Nova transacao
+            Nova transação
           </Button>
         </NewTransactionModal>
       </div>

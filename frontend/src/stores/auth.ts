@@ -17,6 +17,7 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   login: (data: LoginInput) => Promise<boolean>;
+  setUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -59,6 +60,12 @@ export const useAuthStore = create<AuthState>()(
           console.log("Erro ao fazer o login");
           throw error;
         }
+      },
+      setUser: (user: User) => {
+        set((state) => ({
+          ...state,
+          user,
+        }));
       },
       logout: () => {
         set({

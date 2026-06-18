@@ -1,24 +1,6 @@
-import type { ReactNode } from "react";
-import {
-  BriefcaseBusiness,
-  CarFront,
-  HeartPulse,
-  PiggyBank,
-  ShoppingCart,
-  Ticket,
-  X,
-  ToolCase,
-  type LucideIcon,
-  Utensils,
-  PawPrint,
-  House,
-  Gift,
-  Dumbbell,
-  BookOpen,
-  BaggageClaim,
-  Mailbox,
-  ReceiptText,
-} from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useMutation } from "@apollo/client/react";
+import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,60 +14,100 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CREATE_CATEGORY } from "@/lib/graphql/mutations/category";
+import { GET_CATEGORIES } from "@/lib/graphql/queries/category";
+import {
+  type CreateCategoryMutationData,
+  type CreateCategoryMutationVariables,
+  type CreateCategoryOnSubmitParam,
+  type CreateCategoryOnSubmitReturn,
+} from "@/lib/graphql/types/category";
 import { cn } from "@/lib/utils";
-import { useCategoryForm, type CategoryFormValues } from "../category-form";
+import { toast } from "sonner";
+import {
+  categoryColorOptions,
+  categoryIconOptions,
+  getCategoryColorKeyByValue,
+  getCategoryIconKeyByValue,
+  isCategoryColorEnumValue,
+  isCategoryIconEnumValue,
+} from "@/utils/category/category-enums";
+import { useCategoryForm } from "../category-form";
 
 type NewCategoryModalProps = {
   children: ReactNode;
 };
 
-const colorOptions = [
-  { label: "Verde", value: "green", swatch: "bg-emerald-600" },
-  { label: "Azul", value: "blue", swatch: "bg-blue-600" },
-  { label: "Roxo", value: "purple", swatch: "bg-violet-600" },
-  { label: "Rosa", value: "pink", swatch: "bg-pink-600" },
-  { label: "Vermelho", value: "red", swatch: "bg-red-600" },
-  { label: "Laranja", value: "orange", swatch: "bg-orange-600" },
-  { label: "Amarelo", value: "yellow", swatch: "bg-amber-600" },
-];
-
-const iconOptions: Array<{ value: string; icon: LucideIcon }> = [
-  { value: "briefcase", icon: BriefcaseBusiness },
-  { value: "car", icon: CarFront },
-  { value: "heart", icon: HeartPulse },
-  { value: "piggy-bank", icon: PiggyBank },
-  { value: "shopping-cart", icon: ShoppingCart },
-  { value: "ticket", icon: Ticket },
-  { value: "tool-case", icon: ToolCase },
-  { value: "utensils", icon: Utensils },
-  { value: "paw-print", icon: PawPrint },
-  { value: "house", icon: House },
-  { value: "gift", icon: Gift },
-  { value: "dumbbell", icon: Dumbbell },
-  { value: "book-open", icon: BookOpen },
-  { value: "baggage-claim", icon: BaggageClaim },
-  { value: "mailbox", icon: Mailbox },
-  { value: "receipt-text", icon: ReceiptText },
-];
-
 export function NewCategoryModal({ children }: NewCategoryModalProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useCategoryForm();
 
+  const [createCategory, { loading }] = useMutation<
+    CreateCategoryMutationData,
+    CreateCategoryMutationVariables
+  >(CREATE_CATEGORY);
+
   const selectedColor = watch("color");
   const selectedIcon = watch("icon");
+  const selectedColorKey = getCategoryColorKeyByValue(selectedColor) ?? null;
+  const selectedIconKey = getCategoryIconKeyByValue(selectedIcon) ?? null;
 
-  function onSubmit(_values: CategoryFormValues) {
-    // Enquanto o backend nao estiver pronto, o submit permanece apenas visual.
+  function handleOpenChange(open: boolean) {
+    setIsOpen(open);
+
+    if (!open) {
+      reset();
+    }
+  }
+
+  async function onSubmit(
+    values: CreateCategoryOnSubmitParam,
+  ): CreateCategoryOnSubmitReturn {
+    if (
+      !isCategoryIconEnumValue(values.icon) ||
+      !isCategoryColorEnumValue(values.color)
+    ) {
+      toast.error("Selecione um ícone e uma cor válidos.");
+      return;
+    }
+
+    try {
+      const description = values.description?.trim();
+      const { data } = await createCategory({
+        variables: {
+          data: {
+            title: values.title.trim(),
+            description: description || undefined,
+            icon: values.icon,
+            color: values.color,
+          },
+        },
+        refetchQueries: [{ query: GET_CATEGORIES }],
+        awaitRefetchQueries: true,
+      });
+
+      if (data?.createCategory) {
+        toast.success("Categoria criada com sucesso!");
+        reset();
+        setIsOpen(false);
+        return;
+      }
+
+      toast.error("Não foi possível criar a categoria.");
+    } catch {
+      toast.error("Não foi possível criar a categoria.");
+    }
   }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
         showCloseButton={false}
@@ -105,6 +127,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Button
               variant="ghost"
               size="icon-sm"
+              disabled={loading}
               className="rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-100"
             >
               <X className="size-4" />
@@ -124,6 +147,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Input
               id="category-title"
               placeholder="Ex. Alimentação"
+              disabled={loading}
               {...register("title")}
             />
             {errors.title ? (
@@ -141,6 +165,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Input
               id="category-description"
               placeholder="Descrição da categoria"
+              disabled={loading}
               {...register("description")}
             />
             <p className="text-xs text-gray-500">Opcional</p>
@@ -150,19 +175,20 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             <Label className="text-sm font-medium text-gray-700">Ícone</Label>
             <input type="hidden" {...register("icon")} />
             <div className="grid w-full grid-cols-8 gap-2">
-              {iconOptions.map(({ value, icon: Icon }) => (
+              {categoryIconOptions.map(({ enumKey, enumValue, icon: Icon }) => (
                 <Button
-                  key={value}
+                  key={enumKey}
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  disabled={loading}
                   className={cn(
                     "size-10.5 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50",
-                    selectedIcon === value &&
+                    selectedIconKey === enumKey &&
                       "border-primary bg-primary/10 text-primary",
                   )}
                   onClick={() =>
-                    setValue("icon", value, {
+                    setValue("icon", enumValue, {
                       shouldDirty: true,
                       shouldValidate: true,
                       shouldTouch: true,
@@ -187,13 +213,14 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
             </Label>
             <input id="category-color" type="hidden" {...register("color")} />
             <div className="grid grid-cols-7 gap-2">
-              {colorOptions.map((option) => (
+              {categoryColorOptions.map((option) => (
                 <button
-                  key={option.value}
+                  key={option.enumKey}
                   type="button"
                   aria-label={option.label}
+                  disabled={loading}
                   onClick={() =>
-                    setValue("color", option.value, {
+                    setValue("color", option.enumValue, {
                       shouldDirty: true,
                       shouldValidate: true,
                       shouldTouch: true,
@@ -202,7 +229,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
                   className={cn(
                     "h-6 w-full rounded-md border border-gray-300",
                     option.swatch,
-                    selectedColor === option.value &&
+                    selectedColorKey === option.enumKey &&
                       "ring-2 ring-offset-1 ring-primary",
                   )}
                 />
@@ -215,6 +242,7 @@ export function NewCategoryModal({ children }: NewCategoryModalProps) {
 
           <Button
             type="submit"
+            disabled={loading}
             className="h-11 w-full rounded-lg text-base font-medium"
           >
             Salvar

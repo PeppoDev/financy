@@ -7,16 +7,19 @@ type CategorySummaryRowProps = {
 };
 
 export function CategorySummaryRow({ category }: CategorySummaryRowProps) {
-  const meta = categoriesMap[category.categoryKey];
-  const Icon = meta.icon;
+  const meta = category.categoryKey
+    ? categoriesMap[category.categoryKey]
+    : undefined;
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3">
       <div>
         <span
-          className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${meta.badgeClassName}`}
+          className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${
+            meta?.badgeClassName ?? "bg-gray-100 text-gray-700"
+          }`}
         >
-          {meta.label}
+          {meta?.label ?? category.label}
         </span>
       </div>
       <span className="text-sm text-gray-500">

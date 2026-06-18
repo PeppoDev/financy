@@ -1,28 +1,4 @@
-import { ArrowDownCircle, ArrowUpCircle, Landmark } from "lucide-react";
-
-import type {
-  CategorySummary,
-  SummaryCard,
-  TransactionRow,
-} from "./dashboard.types";
-
-export const summaryCards: SummaryCard[] = [
-  {
-    title: "Saldo total",
-    value: "R$ 12.847,32",
-    icon: <Landmark className="size-4 text-violet-500" />,
-  },
-  {
-    title: "Receitas do mes",
-    value: "R$ 4.250,00",
-    icon: <ArrowUpCircle className="size-4 text-emerald-600" />,
-  },
-  {
-    title: "Despesas do mes",
-    value: "R$ 2.180,45",
-    icon: <ArrowDownCircle className="size-4 text-red-500" />,
-  },
-];
+import type { CategorySummary, TransactionRow } from "./dashboard.types";
 
 export const recentTransactions: TransactionRow[] = [
   {
@@ -68,9 +44,34 @@ export const recentTransactions: TransactionRow[] = [
 ];
 
 export const categorySummaries: CategorySummary[] = [
-  { categoryKey: "alimentacao", items: 12, total: "R$ 542,30" },
-  { categoryKey: "transporte", items: 8, total: "R$ 385,50" },
-  { categoryKey: "mercado", items: 3, total: "R$ 298,75" },
-  { categoryKey: "entretenimento", items: 2, total: "R$ 186,20" },
-  { categoryKey: "utilidades", items: 7, total: "R$ 245,80" },
+  {
+    label: "Alimentacao",
+    categoryKey: "alimentacao",
+    items: 12,
+    total: "R$ 542,30",
+  },
+  {
+    label: "Transporte",
+    categoryKey: "transporte",
+    items: 8,
+    total: "R$ 385,50",
+  },
+  {
+    label: "Mercado",
+    categoryKey: "mercado",
+    items: 3,
+    total: "R$ 298,75",
+  },
+  {
+    label: "Entretenimento",
+    categoryKey: "entretenimento",
+    items: 2,
+    total: "R$ 186,20",
+  },
+  {
+    label: "Utilidades",
+    categoryKey: "utilidades",
+    items: 7,
+    total: "R$ 245,80",
+  },
 ];

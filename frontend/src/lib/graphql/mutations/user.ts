@@ -9,3 +9,13 @@ export const CREATE_USER = gql`
     }
   }
 `;
+
+export const UPDATE_USER = gql`
+  mutation UpdateUser($data: UpdateUser!) {
+    updateUser(data: $data) {
+      id
+      name
+      email
+    }
+  }
+`;

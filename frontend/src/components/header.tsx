@@ -4,7 +4,6 @@ import logo from "@/assets/logo.svg";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth";
 
 const navItemVariants = cva("no-underline hover:no-underline", {
   variants: {
@@ -20,7 +19,7 @@ const navItemVariants = cva("no-underline hover:no-underline", {
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard", end: true },
-  { label: "Transacoes", to: "/dashboard/transactions", end: false },
+  { label: "Transações", to: "/dashboard/transactions", end: false },
   { label: "Categorias", to: "/dashboard/categories", end: false },
 ];
 

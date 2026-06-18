@@ -1,4 +1,11 @@
+import { useMutation } from "@apollo/client/react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { LogOutIcon, MailIcon, UserIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { z } from "zod";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,18 +13,69 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { UPDATE_USER } from "@/lib/graphql/mutations/user";
+import {
+  type UpdateUserMutationData,
+  type UpdateUserMutationVariables,
+} from "@/lib/graphql/types/user";
 import { useAuthStore } from "@/stores/auth";
-import { useNavigate } from "react-router-dom";
+
+const updateUserFormSchema = z.object({
+  name: z.string().trim().min(1, "O nome e obrigatorio"),
+});
+
+type UpdateUserFormValues = z.infer<typeof updateUserFormSchema>;
+
+type AccountOnSubmitParam = UpdateUserFormValues;
+
+type AccountOnSubmitReturn = Promise<void>;
 
 export function Account() {
   const navigate = useNavigate();
-  const {
-    logout,
-    user: { email, name },
-  } = useAuthStore();
+  const { user, logout, setUser } = useAuthStore();
+  const email = user?.email ?? "";
+  const name = user?.name ?? "";
+
+  const [updateUser, { loading }] = useMutation<
+    UpdateUserMutationData,
+    UpdateUserMutationVariables
+  >(UPDATE_USER);
+
+  const { register, handleSubmit } = useForm<UpdateUserFormValues>({
+    resolver: zodResolver(updateUserFormSchema),
+    defaultValues: {
+      name,
+    },
+  });
+
+  async function onSubmit(data: AccountOnSubmitParam): AccountOnSubmitReturn {
+    if (!user) {
+      toast.error("Usuario nao autenticado.");
+      return;
+    }
+
+    try {
+      const { data: mutationData } = await updateUser({
+        variables: {
+          data: {
+            name: data.name,
+          },
+        },
+      });
+
+      if (mutationData?.updateUser) {
+        setUser(mutationData.updateUser);
+        toast.success("Nome atualizado com sucesso!");
+        return;
+      }
+
+      toast.error("Nao foi possivel atualizar o nome.");
+    } catch {
+      toast.error("Nao foi possivel atualizar o nome.");
+    }
+  }
 
   function handleLogout() {
-    console.log("chamou");
     logout();
     navigate("/");
   }
@@ -37,7 +95,7 @@ export function Account() {
 
         <div className="mb-7 h-px w-full bg-gray-200" />
 
-        <div className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label
               className="mb-2 block text-base font-medium text-gray-700"
@@ -48,7 +106,7 @@ export function Account() {
             <InputGroup className="h-12 border-gray-300">
               <InputGroupInput
                 id="account-name"
-                defaultValue={name}
+                {...register("name")}
                 className="text-base text-gray-700"
               />
               <InputGroupAddon align="inline-start">
@@ -80,20 +138,26 @@ export function Account() {
             </p>
           </div>
 
-          <Button size="lg" className="h-12 w-full text-base font-semibold">
+          <Button
+            size="lg"
+            type="submit"
+            disabled={loading}
+            className="h-12 w-full text-base font-semibold"
+          >
             Salvar alteracoes
           </Button>
 
           <Button
             variant="outline"
             size="lg"
+            type="button"
             onClick={handleLogout}
             className="h-12 w-full text-base font-medium text-gray-700"
           >
             <LogOutIcon className="h-4 w-4 text-red-500" />
             Sair da conta
           </Button>
-        </div>
+        </form>
       </div>
     </section>
   );

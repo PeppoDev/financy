@@ -1,15 +1,18 @@
 import { ArrowUpDown, Tag, Utensils } from "lucide-react";
 
 import { Card, CardTitle } from "@/components/ui/card";
-import { categories } from "../categories.data";
-import { categorySummaries } from "@/pages/dashboard/dashboard.data";
 
-export function CategoriesStats() {
-  const totalTransactions = categorySummaries.reduce(
-    (acc, item) => acc + item.items,
-    0,
-  );
+type CategoriesStatsProps = {
+  totalCategories: number;
+  totalTransactions: number;
+  mostUsedCategory: string | null;
+};
 
+export function CategoriesStats({
+  totalCategories,
+  totalTransactions,
+  mostUsedCategory,
+}: CategoriesStatsProps) {
   return (
     <section className="grid gap-4 md:grid-cols-3">
       <Card className="bg-white p-6">
@@ -17,7 +20,7 @@ export function CategoriesStats() {
           <Tag className="size-6 text-gray-700 m-2" />
           <div className="flex flex-col justify-start gap-2">
             <p className="flex items-center gap-2 text-[28px]/[32px]  font-semibold text-gray-800">
-              {categories.length}
+              {totalCategories}
             </p>
             <CardTitle className="text-xs font-semibold tracking-wide uppercase text-gray-500">
               Total de categorias
@@ -42,10 +45,12 @@ export function CategoriesStats() {
 
       <Card className="bg-white p-6">
         <div className="flex flex-row items-start gap-4">
-          <Utensils className="m-2 size-6 text-blue-base" />
+          {mostUsedCategory ? (
+            <Utensils className="m-2 size-6 text-blue-base" />
+          ) : null}
           <div className="flex flex-col justify-start gap-2">
             <p className="flex items-center gap-2 text-[28px]/[32px] font-semibold text-gray-800">
-              Alimentação
+              {mostUsedCategory ?? "Sem dados"}
             </p>
             <CardTitle className="text-xs font-semibold tracking-wide uppercase text-gray-500">
               Categoria mais utilizada

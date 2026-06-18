@@ -12,7 +12,8 @@ export type TransactionRow = {
 };
 
 export type CategorySummary = {
-  categoryKey: CategoryKey;
+  label: string;
+  categoryKey?: CategoryKey;
   items: number;
   total: string;
 };
